@@ -1,0 +1,226 @@
+To ensure that your ads are in testing mode and you do not violate AdMob policies during app testing, you can set the _isTest variable to true in your AdHelper class. This will use the test ad unit IDs provided by Google.
+
+Here is the updated ad_helper.dart file with _isTest set to true:
+
+import 'dart:async';
+import 'dart:io';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:flutter/foundation.dart';
+
+class AdHelper {
+  static final AdHelper _instance = AdHelper._internal();
+  static const bool _isTest = true; // Set to true for testing mode
+
+  factory AdHelper() {
+    return _instance;
+  }
+
+  AdHelper._internal();
+
+  bool _initialized = false;
+  bool _isDisposed = false;
+  AppOpenAd? _appOpenAd;
+  InterstitialAd? _interstitialAd;
+  Timer? _interstitialTimer;
+  bool _isAnyAdShowing = false;
+  BannerAd? _bannerAd;
+  bool _isBannerAdLoaded = false;
+
+  // Add ValueNotifier for banner state
+  final ValueNotifier<bool> bannerAdLoaded = ValueNotifier<bool>(false);
+
+  // App IDs
+  static String get appId {
+    if (_isTest) {
+      return Platform.isIOS
+          ? 'ca-app-pub-3940256099942544~1458002511' // iOS test app ID
+          : 'ca-app-pub-3940256099942544~3347511713'; // Android test app ID
+    }
+    return Platform.isIOS
+        ? 'ca-app-pub-8204427937072562~7448963801' // Your iOS app ID
+        : 'ca-app-pub-8204427937072562~4856867166'; // Your Android app ID
+  }
+
+  // Ad Unit IDs
+  static String get appOpenAdUnitId => _isTest
+      ? Platform.isIOS
+          ? 'ca-app-pub-3940256099942544/5662855259' // iOS test app open
+          : 'ca-app-pub-3940256099942544/3419835294' // Android test app open
+      : Platform.isIOS
+          ? 'ca-app-pub-8204427937072562/3098655252' // Your iOS app open
+          : 'ca-app-pub-8204427937072562/3801933659'; // Your Android app open
+
+  static String get interstitialAdUnitId => _isTest
+      ? Platform.isIOS
+          ? 'ca-app-pub-3940256099942544/4411468910' // iOS test interstitial
+          : 'ca-app-pub-3940256099942544/1033173712' // Android test interstitial
+      : Platform.isIOS
+          ? 'ca-app-pub-8204427937072562/4411736928' // Your iOS interstitial
+          : 'ca-app-pub-8204427937072562/9726050469'; // Your Android interstitial
+
+  static String get bannerAdUnitId => _isTest
+      ? Platform.isIOS
+          ? 'ca-app-pub-3940256099942544/2934735716' // iOS test banner
+          : 'ca-app-pub-3940256099942544/6300978111' // Android test banner
+      : Platform.isIOS
+          ? 'ca-app-pub-8204427937072562/4822800464' // Your iOS banner
+          : 'ca-app-pub-8204427937072562/9325723076'; // Your Android banner
+
+  Future<void> initialize() async {
+    if (_initialized) return;
+
+    try {
+      print('AdHelper: Initializing...');
+      await MobileAds.instance.initialize();
+      _initialized = true;
+
+      // Load banner ad first
+      loadBannerAd();
+
+      // Delay other ads
+      Future.delayed(const Duration(seconds: 15), () async {
+        if (Platform.isIOS) {
+          final status =
+              await AppTrackingTransparency.trackingAuthorizationStatus;
+          if (status == TrackingStatus.notDetermined) {
+            await AppTrackingTransparency.requestTrackingAuthorization();
+          }
+        }
+        _loadAppOpenAd();
+        _loadInterstitialAd();
+        _startInterstitialTimer();
+      });
+    } catch (e) {
+      print('AdHelper: Failed to initialize - $e');
+    }
+  }
+
+  void _loadAppOpenAd() {
+    if (_isDisposed) return;
+    print('AdHelper: Loading app open ad...');
+
+    AppOpenAd.load(
+      adUnitId: appOpenAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: AppOpenAdLoadCallback(
+        onAdLoaded: (ad) {
+          print('AdHelper: App open ad loaded successfully');
+          _appOpenAd = ad;
+          Future.delayed(const Duration(seconds: 15), _showAppOpenAd);
+        },
+        onAdFailedToLoad: (error) {
+          print('AdHelper: App open ad failed to load - $error');
+          _appOpenAd = null;
+          Future.delayed(const Duration(seconds: 30), _loadAppOpenAd);
+        },
+      ),
+    );
+  }
+
+  void _loadInterstitialAd() {
+    if (_isDisposed) return;
+    print('AdHelper: Loading interstitial ad...');
+
+    InterstitialAd.load(
+      adUnitId: interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          print('AdHelper: Interstitial ad loaded successfully');
+          _interstitialAd = ad;
+          _setupInterstitialCallbacks(ad);
+        },
+        onAdFailedToLoad: (error) {
+          print('AdHelper: Interstitial ad failed to load - $error');
+          _interstitialAd = null;
+          Future.delayed(const Duration(seconds: 30), _loadInterstitialAd);
+        },
+      ),
+    );
+  }
+
+  void _setupInterstitialCallbacks(InterstitialAd ad) {
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (ad) {
+        print('AdHelper: Interstitial ad shown');
+        _isAnyAdShowing = true;
+      },
+      onAdDismissedFullScreenContent: (ad) {
+        print('AdHelper: Interstitial ad dismissed');
+        _isAnyAdShowing = false;
+        ad.dispose();
+        _loadInterstitialAd();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        print('AdHelper: Interstitial ad failed to show - $error');
+        _isAnyAdShowing = false;
+        ad.dispose();
+        _loadInterstitialAd();
+      },
+    );
+  }
+
+  void _startInterstitialTimer() {
+    _interstitialTimer?.cancel();
+    _interstitialTimer = Timer.periodic(
+      const Duration(seconds: 90),
+      (_) => _showInterstitialAd(),
+    );
+  }
+
+  void _showAppOpenAd() {
+    if (_appOpenAd == null || _isAnyAdShowing || _isDisposed) return;
+
+    _appOpenAd!.show();
+  }
+
+  void _showInterstitialAd() {
+    if (_interstitialAd == null || _isAnyAdShowing || _isDisposed) return;
+
+    _interstitialAd!.show();
+    _interstitialAd = null;
+  }
+
+  // Add getter for banner ad
+  BannerAd? get bannerAd => _bannerAd;
+
+  void loadBannerAd() {
+    if (_isDisposed) return;
+    print('AdHelper: Starting banner ad load...');
+
+    _bannerAd = BannerAd(
+      adUnitId: bannerAdUnitId,
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          print('AdHelper: Banner ad loaded successfully');
+          _isBannerAdLoaded = true;
+          bannerAdLoaded.value = true;
+        },
+        onAdFailedToLoad: (ad, error) {
+          print('AdHelper: Banner ad failed to load - $error');
+          _isBannerAdLoaded = false;
+          bannerAdLoaded.value = false;
+          ad.dispose();
+          _bannerAd = null;
+        },
+      ),
+    )..load();
+  }
+
+  // Update getter to also check if ad exists
+  bool get isBannerAdLoaded => _isBannerAdLoaded && _bannerAd != null;
+
+  void dispose() {
+    _isDisposed = true;
+    _appOpenAd?.dispose();
+    _interstitialAd?.dispose();
+    _interstitialTimer?.cancel();
+    _bannerAd?.dispose();
+  }
+}
+
+
+By setting _isTest to true, the app will use the test ad unit IDs provided by Google, ensuring that you do not violate AdMob policies during testing. When you are ready to release your app, you can set _isTest to false to use your actual ad unit IDs.
