@@ -4,10 +4,10 @@ project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "Gallons to Liters_to_Milligrams_converter")
+set(BINARY_NAME "libras a kilos")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.example.Gallons to Liters_to_Milligrams_converter")
+set(APPLICATION_ID "com.example.libras a kilos")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
