@@ -72,7 +72,7 @@ class FormulaPage extends StatelessWidget {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: CupertinoColors.systemGreen,
+              color: Color(0xFFD4CE38), // Changed from systemGreen to #d4ce38
             ),
           ),
           const SizedBox(height: 12),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(LibrasAKilogramosApp());
+  runApp(const LibrasAKilogramosApp());
 }
 
 class LibrasAKilogramosApp extends StatelessWidget {
@@ -10,11 +10,26 @@ class LibrasAKilogramosApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Convertidor de Libras a Kilogramos',
+      title: 'Convertidor de Libras a Kilos',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: MaterialColor(0xFFD4CE38, {
+          50: Color(0xFFFAF9E6),
+          100: Color(0xFFF3F1C1),
+          200: Color(0xFFEBE898),
+          300: Color(0xFFE3DF6F),
+          400: Color(0xFFDDD851),
+          500: Color(0xFFD4CE38), // Your specified color
+          600: Color(0xFFCFC932),
+          700: Color(0xFFC9C22B),
+          800: Color(0xFFC3BC24),
+          900: Color(0xFFB9B017),
+        }),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Color(0xFFD4CE38),
+          primary: Color(0xFFD4CE38),
+        ),
       ),
-      home: LibrasAKilogramosHomePage(),
+      home: const LibrasAKilogramosHomePage(),
     );
   }
 }
@@ -42,7 +57,11 @@ class _LibrasAKilogramosHomePageState extends State<LibrasAKilogramosHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Convertidor de Libras a Kilogramos'),
+        backgroundColor: const Color(0xFFD4CE38),
+        title: const Text(
+          'Convertidor de Libras a Kilogramos',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -52,18 +71,29 @@ class _LibrasAKilogramosHomePageState extends State<LibrasAKilogramosHomePage> {
               controller: _controller,
               decoration: InputDecoration(
                 labelText: 'Ingrese libras',
+                labelStyle: TextStyle(color: Color(0xFFD4CE38)),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFFD4CE38)),
+                ),
               ),
               keyboardType: TextInputType.number,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _convert,
-              child: Text('Convertir'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD4CE38),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Convertir'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
               'Resultado: $_result kilogramos',
-              style: TextStyle(fontSize: 20),
+              style: const TextStyle(
+                fontSize: 20,
+                color: Color(0xFFD4CE38),
+              ),
             ),
           ],
         ),

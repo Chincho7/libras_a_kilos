@@ -22,14 +22,21 @@ class CustomKeyboard extends StatelessWidget {
               onPressed: () => onKeyTap(key),
               child: Text(
                 key,
-                style: const TextStyle(fontSize: 24),
+                style: const TextStyle(
+                  fontSize: 24,
+                  color: Color(0xFFD4CE38), // Changed from default to #d4ce38
+                ),
               ),
             ),
           ),
           CupertinoButton(
             padding: EdgeInsets.zero,
             onPressed: () => onKeyTap('backspace'),
-            child: const Icon(CupertinoIcons.delete_left, size: 24),
+            child: const Icon(
+              CupertinoIcons.delete_left,
+              size: 24,
+              color: Color(0xFFD4CE38), // Changed from default to #d4ce38
+            ),
           ),
         ],
       ),

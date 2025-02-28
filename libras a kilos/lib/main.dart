@@ -8,34 +8,38 @@ import 'pages/formula_page.dart';
 import 'services/ad_helper.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Force portrait mode for all devices
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+    // Force portrait mode for all devices
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-  // Initialize MobileAds first
-  await MobileAds.instance.initialize();
+    // Initialize MobileAds first
+    await MobileAds.instance.initialize();
 
-  runApp(const MyApp());
-
-  // Handle ATT and ads
-  if (Platform.isIOS) {
-    await Future.delayed(const Duration(seconds: 1));
-    final status = await AppTrackingTransparency.trackingAuthorizationStatus;
-    if (status == TrackingStatus.notDetermined) {
-      await AppTrackingTransparency.requestTrackingAuthorization();
+    // Handle ATT for iOS before running the app
+    if (Platform.isIOS) {
+      await Future.delayed(const Duration(seconds: 1));
+      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+      if (status == TrackingStatus.notDetermined) {
+        await AppTrackingTransparency.requestTrackingAuthorization();
+      }
     }
 
-    // Initialize ads after ATT
+    // Run the app before initializing ads
+    runApp(const MyApp());
+
+    // Initialize ads after the app is running
     final adHelper = AdHelper();
     await adHelper.initialize();
-  } else {
-    // For Android, initialize directly
-    final adHelper = AdHelper();
-    await adHelper.initialize();
+  } catch (e, stackTrace) {
+    print('Error: $e');
+    print('StackTrace: $stackTrace');
+    // Run the app even if there's an error with ads
+    runApp(const MyApp());
   }
 }
 
@@ -48,7 +52,7 @@ class MyApp extends StatelessWidget {
       title: 'Libras a Kilogramos',
       debugShowCheckedModeBanner: false,
       theme: CupertinoThemeData(
-        primaryColor: CupertinoColors.systemGreen,
+        primaryColor: Color(0xFFD4CE38), // Changed from systemGreen to #d4ce38
         brightness: Brightness.light,
       ),
       home: ConversionScreen(),
@@ -169,7 +173,7 @@ class _ConversionScreenState extends State<ConversionScreen> {
           },
           child: const Icon(
             CupertinoIcons.info_circle,
-            color: CupertinoColors.systemGreen,
+            color: Color(0xFFD4CE38), // Changed from systemGreen to #d4ce38
           ),
         ),
       ),
@@ -234,7 +238,8 @@ class _ConversionScreenState extends State<ConversionScreen> {
                         child: const Icon(
                           CupertinoIcons.arrow_up_arrow_down,
                           size: 48.0,
-                          color: CupertinoColors.systemGreen,
+                          color: Color(
+                              0xFFD4CE38), // Changed from systemGreen to #d4ce38
                         ),
                       ),
                     ),

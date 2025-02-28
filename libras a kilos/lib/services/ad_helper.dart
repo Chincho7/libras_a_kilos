@@ -1,4 +1,4 @@
-// /Users/janogroup/Documents/GitHub/Gallons to Liters_to_Milligrams_converter/lib/services/ad_helper.dart
+// /Users/janogroup/Documents/GitHub/Libras_a_Kilos/lib/services/ad_helper.dart
 
 import 'dart:async';
 import 'dart:io';
@@ -14,18 +14,18 @@ class AdHelper {
 
   static const bool _isTest = false; // Changed from true to false
 
-  // Simplified ad unit getters with only production IDs
+  // Updated ad unit getters with new production IDs
   static String get appOpenAdUnitId => Platform.isIOS
-      ? 'ca-app-pub-8204427937072562/3098655252'
-      : 'ca-app-pub-8204427937072562/3801933659';
+      ? 'ca-app-pub-8204427937072562/9158760593'
+      : 'ca-app-pub-8204427937072562/1450563480';
 
   static String get interstitialAdUnitId => Platform.isIOS
-      ? 'ca-app-pub-8204427937072562/1206224745'
-      : 'ca-app-pub-8204427937072562/3512065719';
+      ? 'ca-app-pub-8204427937072562/2572073462'
+      : 'ca-app-pub-8204427937072562/5411087278';
 
   static String get bannerAdUnitId => Platform.isIOS
-      ? 'ca-app-pub-8204427937072562/4822800464'
-      : 'ca-app-pub-8204427937072562/9325723076';
+      ? 'ca-app-pub-8204427937072562/1471842262'
+      : 'ca-app-pub-8204427937072562/4289577292';
 
   // Properties
   bool _initialized = false;
@@ -219,5 +219,14 @@ class AdHelper {
     _interstitialAd?.dispose();
     _bannerAd?.dispose();
     bannerAdLoaded.dispose();
+  }
+
+  String _getBannerAdUnitId() {
+    if (Platform.isAndroid) {
+      return 'YOUR_ANDROID_BANNER_AD_UNIT_ID'; // Replace with your actual ad unit ID
+    } else if (Platform.isIOS) {
+      return 'YOUR_IOS_BANNER_AD_UNIT_ID'; // Replace with your actual ad unit ID
+    }
+    throw UnsupportedError('Unsupported platform');
   }
 }

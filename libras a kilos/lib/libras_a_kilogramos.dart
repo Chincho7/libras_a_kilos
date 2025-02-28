@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(LibrasAKilogramosApp());
+  runApp(const LibrasAKilogramosApp());
 }
 
 class LibrasAKilogramosApp extends StatelessWidget {
@@ -14,7 +14,7 @@ class LibrasAKilogramosApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: LibrasAKilogramosHomePage(),
+      home: const LibrasAKilogramosHomePage(),
     );
   }
 }
@@ -42,7 +42,7 @@ class _LibrasAKilogramosHomePageState extends State<LibrasAKilogramosHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Convertidor de Libras a Kilogramos'),
+        title: const Text('Convertidor de Libras a Kilogramos'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -50,20 +50,20 @@ class _LibrasAKilogramosHomePageState extends State<LibrasAKilogramosHomePage> {
           children: <Widget>[
             TextField(
               controller: _controller,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Ingrese libras',
               ),
               keyboardType: TextInputType.number,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _convert,
-              child: Text('Convertir'),
+              child: const Text('Convertir'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
               'Resultado: $_result kilogramos',
-              style: TextStyle(fontSize: 20),
+              style: const TextStyle(fontSize: 20),
             ),
           ],
         ),
