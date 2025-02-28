@@ -12,7 +12,9 @@ class AdHelper {
   factory AdHelper() => _instance;
   AdHelper._internal();
 
-  static const bool _isTest = false; // Changed from true to false
+  static const bool _isTest = true; // Change to true to disable ads
+  static const bool _adsEnabled =
+      false; // Add this line to control ads globally
 
   // Updated ad unit getters with new production IDs
   static String get appOpenAdUnitId => Platform.isIOS
@@ -42,31 +44,16 @@ class AdHelper {
   bool _isInterstitialAdReady = false;
 
   Future<void> initialize() async {
-    if (_initialized || _isDisposed) return;
+    if (_initialized || _isDisposed || !_adsEnabled)
+      return; // Add _adsEnabled check
     _initialized = true;
 
-    print('AdHelper: Initializing...');
-
-    try {
-      if (Platform.isIOS) {
-        await Future.delayed(const Duration(seconds: 1));
-        final status =
-            await AppTrackingTransparency.trackingAuthorizationStatus;
-        if (status == TrackingStatus.notDetermined) {
-          await AppTrackingTransparency.requestTrackingAuthorization();
-        }
-      }
-
-      await loadBannerAd();
-      await _loadAppOpenAd();
-      await _loadInterstitialAd();
-      _startInterstitialTimer(); // Add this line to start the timer
-    } catch (e) {
-      print('AdHelper: Initialization error: $e');
-    }
+    print('AdHelper: Ads are disabled for testing');
+    // Rest of initialization will be skipped when _adsEnabled is false
   }
 
   Future<void> _loadAppOpenAd() async {
+    if (!_adsEnabled) return; // Add this check
     if (_wasAppOpenAdShown || _isDisposed) return;
 
     print('AdHelper: Loading app open ad...');
@@ -92,6 +79,7 @@ class AdHelper {
   }
 
   Future<void> loadBannerAd() async {
+    if (!_adsEnabled) return; // Add this check
     if (_isDisposed) return;
 
     print('AdHelper: Starting banner ad load...');
@@ -128,6 +116,7 @@ class AdHelper {
   }
 
   Future<void> _loadInterstitialAd() async {
+    if (!_adsEnabled) return; // Add this check
     if (_isDisposed || _isInterstitialAdReady) return;
 
     print('AdHelper: Loading interstitial ad...');
@@ -177,6 +166,7 @@ class AdHelper {
   }
 
   void _startInterstitialTimer() {
+    if (!_adsEnabled) return; // Add this check
     _interstitialTimer?.cancel();
     _interstitialTimer = Timer.periodic(
       const Duration(seconds: 30), // Changed from 90 to 30 seconds
