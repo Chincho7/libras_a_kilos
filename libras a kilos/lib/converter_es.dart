@@ -12,21 +12,21 @@ class LibrasAKilogramosApp extends StatelessWidget {
     return MaterialApp(
       title: 'Convertidor de Libras a Kilos',
       theme: ThemeData(
-        primarySwatch: MaterialColor(0xFFD4CE38, {
-          50: Color(0xFFFAF9E6),
-          100: Color(0xFFF3F1C1),
-          200: Color(0xFFEBE898),
-          300: Color(0xFFE3DF6F),
-          400: Color(0xFFDDD851),
-          500: Color(0xFFD4CE38), // Your specified color
-          600: Color(0xFFCFC932),
-          700: Color(0xFFC9C22B),
-          800: Color(0xFFC3BC24),
-          900: Color(0xFFB9B017),
+        primarySwatch: const MaterialColor(0xFFD4CE38, {
+          50: const Color(0xFFFAF9E6),
+          100: const Color(0xFFF3F1C1),
+          200: const Color(0xFFEBE898),
+          300: const Color(0xFFE3DF6F),
+          400: const Color(0xFFDDD851),
+          500: const Color(0xFFD4CE38), // Your specified color
+          600: const Color(0xFFCFC932),
+          700: const Color(0xFFC9C22B),
+          800: const Color(0xFFC3BC24),
+          900: const Color(0xFFB9B017),
         }),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Color(0xFFD4CE38),
-          primary: Color(0xFFD4CE38),
+          seedColor: const Color(0xFFD4CE38),
+          primary: const Color(0xFFD4CE38),
         ),
       ),
       home: const LibrasAKilogramosHomePage(),
@@ -69,7 +69,7 @@ class _LibrasAKilogramosHomePageState extends State<LibrasAKilogramosHomePage> {
           children: <Widget>[
             TextField(
               controller: _controller,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Ingrese libras',
                 labelStyle: TextStyle(color: Color(0xFFD4CE38)),
                 focusedBorder: UnderlineInputBorder(

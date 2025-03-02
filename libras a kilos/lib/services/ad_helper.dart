@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class AdHelper {
   // Singleton pattern
@@ -12,88 +13,169 @@ class AdHelper {
   factory AdHelper() => _instance;
   AdHelper._internal();
 
-  static const bool _isTest = true; // Change to true to disable ads
-  static const bool _adsEnabled =
-      false; // Add this line to control ads globally
+  // Test Ad Unit IDs
+  static const String _testAppOpenAdUnitIdAndroid = 'ca-app-pub-3940256099942544/3419835294';
+  static const String _testAppOpenAdUnitIdIOS = 'ca-app-pub-3940256099942544/5662855259';
+  static const String _testInterstitialAdUnitIdAndroid = 'ca-app-pub-3940256099942544/1033173712';
+  static const String _testInterstitialAdUnitIdIOS = 'ca-app-pub-3940256099942544/4411468910';
+  static const String _testBannerAdUnitIdAndroid = 'ca-app-pub-3940256099942544/6300978111';
+  static const String _testBannerAdUnitIdIOS = 'ca-app-pub-3940256099942544/2934735716';
 
-  // Updated ad unit getters with new production IDs
-  static String get appOpenAdUnitId => Platform.isIOS
-      ? 'ca-app-pub-8204427937072562/9158760593'
-      : 'ca-app-pub-8204427937072562/1450563480';
-
-  static String get interstitialAdUnitId => Platform.isIOS
-      ? 'ca-app-pub-8204427937072562/2572073462'
-      : 'ca-app-pub-8204427937072562/5411087278';
-
-  static String get bannerAdUnitId => Platform.isIOS
-      ? 'ca-app-pub-8204427937072562/1471842262'
-      : 'ca-app-pub-8204427937072562/4289577292';
-
-  // Properties
-  bool _initialized = false;
-  bool _isDisposed = false;
-  bool _isAnyAdShowing = false;
-  final bool _wasAppOpenAdShown = false;
   AppOpenAd? _appOpenAd;
   InterstitialAd? _interstitialAd;
-  final ValueNotifier<bool> bannerAdLoaded = ValueNotifier<bool>(false);
   BannerAd? _bannerAd;
-
-  // Add timer property
-  Timer? _interstitialTimer;
+  
+  bool _isATTCompleted = false;
+  bool _isAdInitialized = false;
   bool _isInterstitialAdReady = false;
+  int _interstitialLoadAttempts = 0;
+  static const int maxFailedLoadAttempts = 3;
+  
+  Timer? _interstitialTimer;
+  final ValueNotifier<bool> bannerAdLoaded = ValueNotifier<bool>(false);
 
-  Future<void> initialize() async {
-    if (_initialized || _isDisposed || !_adsEnabled)
-      return; // Add _adsEnabled check
-    _initialized = true;
-
-    print('AdHelper: Ads are disabled for testing');
-    // Rest of initialization will be skipped when _adsEnabled is false
+  // Get appropriate ad unit IDs based on build mode and platform
+  String get appOpenAdUnitId {
+    if (kDebugMode) {
+      return Platform.isAndroid ? _testAppOpenAdUnitIdAndroid : _testAppOpenAdUnitIdIOS;
+    } else {
+      return Platform.isIOS
+          ? 'ca-app-pub-8204427937072562/9158760593'
+          : 'ca-app-pub-8204427937072562/1450563480';
+    }
   }
 
-  Future<void> _loadAppOpenAd() async {
-    if (!_adsEnabled) return; // Add this check
-    if (_wasAppOpenAdShown || _isDisposed) return;
+  String get interstitialAdUnitId {
+    if (kDebugMode) {
+      return Platform.isAndroid ? _testInterstitialAdUnitIdAndroid : _testInterstitialAdUnitIdIOS;
+    } else {
+      return Platform.isIOS
+          ? 'ca-app-pub-8204427937072562/2572073462'
+          : 'ca-app-pub-8204427937072562/5411087278';
+    }
+  }
 
-    print('AdHelper: Loading app open ad...');
-    await AppOpenAd.load(
+  String get bannerAdUnitId {
+    if (kDebugMode) {
+      return Platform.isAndroid ? _testBannerAdUnitIdAndroid : _testBannerAdUnitIdIOS;
+    } else {
+      return Platform.isIOS
+          ? 'ca-app-pub-8204427937072562/1471842262'
+          : 'ca-app-pub-8204427937072562/4289577292';
+    }
+  }
+
+  /// Initialize ads when called from MainScreen after UI is loaded
+  Future<void> initialize() async {
+    // Prevent multiple initializations
+    if (_isAdInitialized) return;
+    _isAdInitialized = true;
+    
+    debugPrint('AdHelper initializing with delay - UI is fully loaded');
+    
+    if (Platform.isIOS) {
+      debugPrint('Waiting a moment before showing ATT dialog...');
+      // Short delay to ensure UI is fully interactive before ATT dialog
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      debugPrint('Requesting ATT authorization now');
+      final status = await AppTrackingTransparency.requestTrackingAuthorization();
+      debugPrint('ATT authorization status: $status');
+      _isATTCompleted = true;
+      
+      // After ATT response, start loading ads with a small delay
+      debugPrint('ATT request completed, loading ads after delay');
+      await Future.delayed(const Duration(seconds: 1));
+      _loadAppOpenAd();
+      _loadInterstitialAd();
+      _scheduleInterstitialAd();
+      loadBannerAd();
+    } else {
+      // For Android: Mark ATT as completed and load ads immediately
+      _isATTCompleted = true;
+      _loadAppOpenAd();
+      _loadInterstitialAd();
+      _scheduleInterstitialAd();
+      loadBannerAd();
+    }
+  }
+
+  void _scheduleInterstitialAd() {
+    _interstitialTimer?.cancel();
+    _interstitialTimer = Timer(const Duration(seconds: 70), () {
+      showInterstitialAd();
+    });
+  }
+
+  /// Check if ATT dialog has been answered
+  bool get isATTCompleted => _isATTCompleted;
+
+  /// Loads an App Open Ad.
+  void _loadAppOpenAd() {
+    AppOpenAd.load(
       adUnitId: appOpenAdUnitId,
       request: const AdRequest(),
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
-          print('AdHelper: App open ad loaded successfully');
           _appOpenAd = ad;
-          _showAppOpenAd();
+          debugPrint('App Open Ad loaded successfully.');
         },
         onAdFailedToLoad: (error) {
-          print('AdHelper: App open ad failed to load - $error');
-          _appOpenAd = null;
-          Future.delayed(
-            const Duration(minutes: 1),
-            () => _loadAppOpenAd(),
-          );
+          debugPrint('App Open Ad failed to load: $error');
+          // Retry after delay
+          Future.delayed(const Duration(minutes: 1), _loadAppOpenAd);
         },
       ),
     );
   }
 
-  Future<void> loadBannerAd() async {
-    if (!_adsEnabled) return; // Add this check
-    if (_isDisposed) return;
+  /// Loads an Interstitial Ad.
+  void _loadInterstitialAd() {
+    if (_interstitialLoadAttempts >= maxFailedLoadAttempts) {
+      debugPrint('Max failed load attempts reached for interstitial ad');
+      return;
+    }
 
-    print('AdHelper: Starting banner ad load...');
+    InterstitialAd.load(
+      adUnitId: interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+          _interstitialLoadAttempts = 0;
+          _isInterstitialAdReady = true;
+          debugPrint('Interstitial Ad loaded successfully');
+        },
+        onAdFailedToLoad: (error) {
+          _interstitialLoadAttempts += 1;
+          _interstitialAd = null;
+          _isInterstitialAdReady = false;
+          debugPrint('Interstitial Ad failed to load: $error');
+          
+          if (_interstitialLoadAttempts < maxFailedLoadAttempts) {
+            Future.delayed(const Duration(seconds: 5), () {
+              _loadInterstitialAd();
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  /// Loads a Banner Ad.
+  Future<void> loadBannerAd() async {
+    debugPrint('AdHelper: Starting banner ad load...');
     _bannerAd = BannerAd(
       adUnitId: bannerAdUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) {
-          print('AdHelper: Banner ad loaded successfully');
+          debugPrint('AdHelper: Banner ad loaded successfully');
           bannerAdLoaded.value = true;
         },
         onAdFailedToLoad: (ad, error) {
-          print('AdHelper: Banner ad failed to load: $error');
+          debugPrint('AdHelper: Banner ad failed to load: $error');
           bannerAdLoaded.value = false;
           ad.dispose();
           _bannerAd = null;
@@ -109,90 +191,78 @@ class AdHelper {
     try {
       await _bannerAd?.load();
     } catch (e) {
-      print('AdHelper: Error loading banner ad: $e');
+      debugPrint('AdHelper: Error loading banner ad: $e');
       bannerAdLoaded.value = false;
       _bannerAd = null;
     }
   }
 
-  Future<void> _loadInterstitialAd() async {
-    if (!_adsEnabled) return; // Add this check
-    if (_isDisposed || _isInterstitialAdReady) return;
-
-    print('AdHelper: Loading interstitial ad...');
-    await InterstitialAd.load(
-      adUnitId: interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          print('AdHelper: Interstitial ad loaded successfully');
-          _interstitialAd = ad;
-          _isInterstitialAdReady = true;
-          _setupInterstitialCallbacks(ad);
-        },
-        onAdFailedToLoad: (error) {
-          print('AdHelper: Interstitial ad failed to load: $error');
-          _isInterstitialAdReady = false;
-          _interstitialAd = null;
-          // Retry after delay
-          Future.delayed(
-            const Duration(minutes: 1),
-            _loadInterstitialAd,
-          );
-        },
-      ),
-    );
+  /// Pauses the banner ad by disposing it
+  void pauseBannerAd() {
+    _bannerAd?.dispose();
+    _bannerAd = null;
+    bannerAdLoaded.value = false;
   }
 
-  void _setupInterstitialCallbacks(InterstitialAd ad) {
-    ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (ad) {
-        print('AdHelper: Interstitial ad shown');
-        _isAnyAdShowing = true;
-      },
-      onAdDismissedFullScreenContent: (ad) {
-        print('AdHelper: Interstitial ad dismissed');
-        _isAnyAdShowing = false;
-        ad.dispose();
-        _loadInterstitialAd();
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        print('AdHelper: Interstitial ad failed to show - $error');
-        _isAnyAdShowing = false;
-        ad.dispose();
-        _loadInterstitialAd();
-      },
-    );
-  }
-
-  void _startInterstitialTimer() {
-    if (!_adsEnabled) return; // Add this check
-    _interstitialTimer?.cancel();
-    _interstitialTimer = Timer.periodic(
-      const Duration(seconds: 30), // Changed from 90 to 30 seconds
-      (_) {
-        print('AdHelper: Attempting to show interstitial ad from timer');
-        _showInterstitialAd();
-      },
-    );
-  }
-
-  void _showAppOpenAd() {
-    if (_appOpenAd == null || _isAnyAdShowing || _isDisposed) return;
-
-    _appOpenAd!.show();
-  }
-
-  void _showInterstitialAd() {
-    if (!_isInterstitialAdReady || _interstitialAd == null || _isAnyAdShowing) {
-      print(
-          'AdHelper: Cannot show interstitial ad - Ready: $_isInterstitialAdReady, Ad exists: ${_interstitialAd != null}, Other ad showing: $_isAnyAdShowing');
+  /// Shows the Interstitial Ad if available.
+  void showInterstitialAd() {
+    if (_interstitialAd == null || !_isInterstitialAdReady) {
+      debugPrint('Interstitial Ad not ready. Loading a new one...');
+      _loadInterstitialAd();
       return;
     }
 
-    print('AdHelper: Showing interstitial ad');
+    _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (ad) {
+        debugPrint('Interstitial Ad is showing.');
+        _isInterstitialAdReady = false;
+      },
+      onAdDismissedFullScreenContent: (ad) {
+        debugPrint('Interstitial Ad dismissed.');
+        ad.dispose();
+        _interstitialAd = null;
+        _loadInterstitialAd(); 
+        _scheduleInterstitialAd();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        debugPrint('Interstitial Ad failed to show: $error');
+        ad.dispose();
+        _interstitialAd = null;
+        _isInterstitialAdReady = false;
+        _loadInterstitialAd();
+        _scheduleInterstitialAd();
+      },
+    );
+
     _interstitialAd!.show();
-    _isInterstitialAdReady = false;
+  }
+
+  /// Shows the App Open Ad if available.
+  void showAppOpenAd() {
+    if (_appOpenAd == null) {
+      debugPrint('App Open Ad not ready yet.');
+      return;
+    }
+
+    _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (ad) {
+        debugPrint('App Open Ad is showing.');
+      },
+      onAdDismissedFullScreenContent: (ad) {
+        debugPrint('App Open Ad dismissed.');
+        ad.dispose();
+        _appOpenAd = null;
+        _loadAppOpenAd();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        debugPrint('App Open Ad failed to show: $error');
+        ad.dispose();
+        _appOpenAd = null;
+        _loadAppOpenAd();
+      },
+    );
+
+    _appOpenAd!.show();
   }
 
   // Add getter for banner ad
@@ -201,22 +271,12 @@ class AdHelper {
   // Update getter to also check if ad exists
   bool get isBannerAdLoaded => bannerAdLoaded.value && _bannerAd != null;
 
-  // Update dispose method
+  /// Dispose loaded ads and timer if needed.
   void dispose() {
-    _isDisposed = true;
-    _interstitialTimer?.cancel();
     _appOpenAd?.dispose();
     _interstitialAd?.dispose();
     _bannerAd?.dispose();
+    _interstitialTimer?.cancel();
     bannerAdLoaded.dispose();
-  }
-
-  String _getBannerAdUnitId() {
-    if (Platform.isAndroid) {
-      return 'YOUR_ANDROID_BANNER_AD_UNIT_ID'; // Replace with your actual ad unit ID
-    } else if (Platform.isIOS) {
-      return 'YOUR_IOS_BANNER_AD_UNIT_ID'; // Replace with your actual ad unit ID
-    }
-    throw UnsupportedError('Unsupported platform');
   }
 }
