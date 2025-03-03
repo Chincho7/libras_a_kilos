@@ -204,6 +204,27 @@ class AdHelper {
     bannerAdLoaded.value = false;
   }
 
+  /// Pauses all ads by disposing them
+  void pauseAllAds() {
+    // Dispose and clear banner ad
+    _bannerAd?.dispose();
+    _bannerAd = null;
+    bannerAdLoaded.value = false;
+
+    // Dispose and clear interstitial ad
+    _interstitialAd?.dispose();
+    _interstitialAd = null;
+    _isInterstitialAdReady = false;
+    _interstitialTimer?.cancel();
+
+    // Dispose and clear app open ad
+    _appOpenAd?.dispose();
+    _appOpenAd = null;
+
+    _isAdInitialized = false;
+    debugPrint('All ads have been paused');
+  }
+
   /// Shows the Interstitial Ad if available.
   void showInterstitialAd() {
     if (_interstitialAd == null || !_isInterstitialAdReady) {
